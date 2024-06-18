@@ -4,7 +4,7 @@ import WelcomeAppShell from './WelcomeAppShell.svelte';
 import { SvelteApplication } from "@typhonjs-fvtt/runtime/svelte/application";
 import { TJSDocument } from "@typhonjs-fvtt/runtime/svelte/store/fvtt/document";
 import { MODULE_ID } from "~/src/helpers/constants"
-import { version } from "../../module.json";
+import { version } from "~/module.json";
 
 export default class WelcomeApplication extends SvelteApplication
 {

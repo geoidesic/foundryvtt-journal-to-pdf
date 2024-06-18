@@ -1,9 +1,9 @@
 {
-  "id": "<MODULE_ID>",
-  "title": "<MODULE_TITLE>",
-  "description": "<MODULE_DESCRIPTION>",
+  "id": "foundryvtt-journal-to-pdf",
+  "title": "Journal to PDF",
+  "description": "Export Journal Entries to PDF",
   "version": "0.0.1",
-  "styles": ["style.css"],
+  "styles": ["dist/style.css"],
   "esmodules": ["index.js"],
   "languages": [
     {
@@ -49,5 +49,5 @@
         }
       }
     ]
-  },
+  }
 }

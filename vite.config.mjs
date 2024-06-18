@@ -13,11 +13,11 @@ import * as path from "path";
 
 // For convenience, you just need to modify the package ID below as it is used to fill in default proxy settings for
 // the dev server.
-const s_PACKAGE_ID = 'modules/<MODULE_ID>';
+const s_PACKAGE_ID = 'modules/foundryvtt-journal-to-pdf';
 
 // A short additional string to add to Svelte CSS hash values to make yours unique. This reduces the amount of
 // duplicated framework CSS overlap between many TRL packages enabled on Foundry VTT at the same time. 'tse' is chosen
-// by shortening '<MODULE_ID>'.
+// by shortening 'foundryvtt-journal-to-pdf'.
 const s_SVELTE_HASH_ID = 'gas';
 
 const s_COMPRESS = false;  // Set to true to compress the module bundle.

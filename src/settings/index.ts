@@ -13,8 +13,8 @@ export function registerSettings(app): void {
 
 function dontShowWelcome() {
   game.settings.register(MODULE_ID, 'dontShowWelcome', {
-    name: game.i18n.localize('<MODULE_ID>.Setting.DontShowWelcome.Name'),
-    hint: game.i18n.localize('<MODULE_ID>.Setting.DontShowWelcome.Hint'),
+    name: game.i18n.localize('foundryvtt-journal-to-pdf.Setting.DontShowWelcome.Name'),
+    hint: game.i18n.localize('foundryvtt-journal-to-pdf.Setting.DontShowWelcome.Hint'),
     scope: 'user',
     config: true,
     default: false,
