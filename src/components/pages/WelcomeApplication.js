@@ -2,8 +2,6 @@
 
 import WelcomeAppShell from './WelcomeAppShell.svelte';
 import { SvelteApplication } from "@typhonjs-fvtt/runtime/svelte/application";
-import { TJSDocument } from "@typhonjs-fvtt/runtime/svelte/store/fvtt/document";
-import { MODULE_ID } from "~/src/helpers/constants"
 import { version } from "~/module.json";
 
 export default class WelcomeApplication extends SvelteApplication
@@ -17,14 +15,13 @@ export default class WelcomeApplication extends SvelteApplication
    static get defaultOptions()
    {
       return foundry.utils.mergeObject(super.defaultOptions, {
-        id: 'foundryvtt-actor-studio-welcome',
-        classes: ['gas-actor-studio'],
+        id: 'foundryvtt-journal-pdf-welcome',
+        classes: ['gjp-actor-studio'],
          resizable: true,
          minimizable: true,
          width: 220,
          height: 400,
-         headerIcon: 'modules/foundryvtt-actor-studio/assets/actor-studio-logo-dragon-white.svg',
-         title: game.i18n.localize('GAS.ActorStudio')+' v'+version,
+         title: game.i18n.localize('GJP.Title')+' v'+version,
          svelte: {
             class: WelcomeAppShell,
             target: document.body,

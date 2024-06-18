@@ -24,26 +24,44 @@ Hooks.once("ready", (app, html, data) => {
   new WelcomeApplication().render(true, { focus: true });
 });
 
+Hooks.on("getJournalSheetHeaderButtons", (app, buttons) => {
 
-Hooks.on("makePDF", (application) => {
+  log.d('app', app);
+  buttons.unshift({
+    label: "Make PDF",
+    class: "make-pdf",
+    icon: "fas fa-file-pdf",
+    onclick: () => {
+      Hooks.call("makePDF", app.object.uuid);
+    }
+  });
 
-  const journal = fromUuidSync("JournalEntry.iwkRT6IGoKgE8zw7");
+  return buttons;
+});
+
+
+Hooks.on("makePDF", (uuid) => {
+
+  const journal = fromUuidSync(uuid);
 
   const pages = journal.collections.pages.entries();
-  let content = '';
+  let content = '<div id="pdf">';
   for (const page of pages) {
-    content += page[1].text.content
+    log.d('page', page)
+    content += `<h1 class="title">${page[1].name}</h1>` + page[1].text.content ;
   }
-  
+  content += '</div>';
+  log.d('content', content);
   const pdf = new jsPDF('p', 'pt', 'a4');
 
   pdf.html(content, {
     callback: function (doc) {
-      pdf.save('myfile.pdf');
+      pdf.save(`${journal.name}.pdf`);
     },
     autoPaging: 'text',
     jsPDF: pdf,
-    windowWidth: 1000,
-    width: 1000
+    windowWidth: 600,
+    width: 600
   });
 });
+
