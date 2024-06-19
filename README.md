@@ -1,3 +1,6 @@
+# Sponsorship & Donations
+If you would like to support my work you can do so here: https://github.com/sponsors/geoidesic
+
 # Journal to PDF
 Is a FoundryVTT module that adds a button to the journal which allows you to export that journal as a PDF.
 - System agnostic.
