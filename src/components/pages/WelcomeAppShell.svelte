@@ -8,7 +8,7 @@
 
 
   export let elementRoot = void 0;
-  export let version = void 0;
+  export const version = void 0;
 
   const application = getContext('#external').application;
 

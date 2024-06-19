@@ -2,7 +2,7 @@
   "id": "foundryvtt-journal-to-pdf",
   "title": "Journal to PDF",
   "description": "Export Journal Entries to PDF",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "styles": ["dist/style.css"],
   "esmodules": ["index.js"],
   "languages": [
