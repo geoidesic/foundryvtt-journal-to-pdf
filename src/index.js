@@ -21,7 +21,9 @@ Hooks.once("ready", (app, html, data) => {
     log.w('Module is not active');
     return;
   }
-  new WelcomeApplication().render(true, { focus: true });
+  if (!game.settings.get(MODULE_ID, 'dontShowWelcome')) {
+    new WelcomeApplication().render(true, { focus: true });
+  }
 });
 
 Hooks.on("getJournalSheetHeaderButtons", (app, buttons) => {
