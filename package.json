@@ -2,7 +2,7 @@
   "description": "A foundryVTT module using Svelte templates",
   "license": "MIT",
   "private": false,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "authors": [
     {
