@@ -4,18 +4,18 @@
  *
  * Vite / Rollup includes style files by importing them; see: `./src/index.js`.
  */
- .tjs-essential-svelte-esm {
+.tjs-essential-svelte-esm
   // Instead of the browser default outline for manually focused components define your own.
-  // Note that this is just for TRL / svelte-standard components as there are several normal elements still used in the
+  // Note that this is just for TRL / standard components as there are several normal elements still used in the
   // demo code thus will have default styles of either Foundry or the browser.
-  --tjs-default-outline-focus-visible: 4px dotted orange;
+  --tjs-default-outline-focus-visible: 4px dotted orange
 
   // Optional transition parameters for all components when manually focused / navigated by keyboard.
   //--tjs-default-transition-focus-visible: box-shadow 0.1s ease-in-out, outline 0.1s ease-in-out;
 
   // -----------------------------------------------------------------------------------------------------------------
 
-  // Other useful default CSS variables that widely apply across TRL / svelte-standard.
+  // Other useful default CSS variables that widely apply across TRL / standard.
   // Please note that the default values are provided. There are many more default and more specific CSS variables to
   // target subsections of components that will be further discussed once they are represented in the demos.
 
@@ -24,10 +24,22 @@
   // You can opt to use box shadow for manually focused / navigated components. In this case remove the outline above.
   // --tjs-default-box-shadow-focus-visible: undefined
 
-}
 
+#pdf h1.title
+  font-size: 2.7rem
+  text-align: center
 
-#pdf h1.title {
-  font-size: 2.7rem;
-  text-align: center;
-}
+#pdf table tr,
+#pdf tr td,
+#pdf table tbody,
+#pdf table thead,
+#pdf table tfoot,
+#pdf table tr th,
+#pdf table tfoot tr tf
+  margin: 0
+  padding: 0
+  background: none
+  border: none
+  border-collapse: collapse
+  border-spacing: 0
+  background-image: none

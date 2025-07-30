@@ -1,5 +1,5 @@
 
-import { LOG_PREFIX, MODULE_ID } from "~/src/helpers/constants"
+import { LOG_PREFIX, MODULE_CODE } from "~/src/helpers/constants"
 
 export const log = {
   ASSERT: 1, ERROR: 2, WARN: 3, INFO: 4, DEBUG: 5, VERBOSE: 6,
@@ -87,3 +87,13 @@ export function decodeUuidString(uuid) {
 }
 
 export const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Gets a localized string
+ * @param {string} string - The string to localize
+ * @return {string} The localized string
+ */
+export function localize(string) {
+  if (typeof game === 'undefined') return string; //- avoid lint error
+  return game.i18n.localize(`${MODULE_CODE}.${string}`);
+}

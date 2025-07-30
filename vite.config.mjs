@@ -17,8 +17,8 @@ const s_PACKAGE_ID = 'modules/foundryvtt-journal-to-pdf';
 
 // A short additional string to add to Svelte CSS hash values to make yours unique. This reduces the amount of
 // duplicated framework CSS overlap between many TRL packages enabled on Foundry VTT at the same time. 'tse' is chosen
-// by shortening 'foundryvtt-journal-to-pdf'.
-const s_SVELTE_HASH_ID = 'gas';
+// by shortening 'foundryvtt-actor-studio'.
+const s_SVELTE_HASH_ID = 'gjp';
 
 const s_COMPRESS = false;  // Set to true to compress the module bundle.
 const s_SOURCEMAPS = true; // Generate sourcemaps for the bundle (recommended).
@@ -51,7 +51,12 @@ export default () => {
 
       css: {
          // Creates a standard configuration for PostCSS with autoprefixer & postcss-preset-env.
-         postcss: postcssConfig({ compress: s_COMPRESS, sourceMap: s_SOURCEMAPS })
+         postcss: postcssConfig({ compress: s_COMPRESS, sourceMap: s_SOURCEMAPS }),
+         preprocessorOptions: {
+            sass: {
+               api: 'modern-compiler'
+            }
+         }
       },
 
       // About server options:

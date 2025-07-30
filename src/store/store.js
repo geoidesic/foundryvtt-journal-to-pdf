@@ -1,4 +1,6 @@
-import { writable, get, derived } from 'svelte/store';;
+import { writable } from 'svelte/store';
+
+// Svelte 5 state management
 export const myStore = writable(false); 
 
 // Function to reset all stores

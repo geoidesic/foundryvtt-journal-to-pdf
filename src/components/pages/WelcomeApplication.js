@@ -19,7 +19,7 @@ export default class WelcomeApplication extends SvelteApplication
         classes: ['gjp-actor-studio'],
          resizable: true,
          minimizable: true,
-         width: 220,
+         width: 500,
          height: 400,
          title: game.i18n.localize('GJP.Title')+' v'+version,
          svelte: {
