@@ -98,7 +98,7 @@ const incrementVersion = (version, type, isPreRelease = false) => {
             newVersion = `${baseVersion}-beta.${currentBetaNumber + 1}`;
             console.log(`📋 Incrementing beta: ${version} → ${newVersion}`);
         } else {
-            // Current version is stable, increment the specified part and add -beta.1
+            // Current version is a release, increment base version and add beta.1
             switch (type) {
                 case 'major':
                     parts[0]++;
@@ -112,17 +112,19 @@ const incrementVersion = (version, type, isPreRelease = false) => {
                 case 'patch':
                     parts[2]++;
                     break;
+                default:
+                    throw new Error('Invalid version type. Use major, minor, or patch.');
             }
             newVersion = `${parts.join('.')}-beta.1`;
-            console.log(`📋 Creating new pre-release: ${version} → ${newVersion}`);
+            console.log(`📋 Creating first pre-release: ${version} → ${newVersion}`);
         }
     } else {
         if (isCurrentlyPreRelease) {
-            // Current version is a pre-release, remove the pre-release part for stable release
+            // Current version is a pre-release, final release drops beta suffix
             newVersion = baseVersion;
-            console.log(`📋 Graduating to stable: ${version} → ${newVersion}`);
+            console.log(`📋 Creating final release: ${version} → ${newVersion}`);
         } else {
-            // Current version is stable, increment normally
+            // Current version is a release, increment normally
             switch (type) {
                 case 'major':
                     parts[0]++;
@@ -136,167 +138,320 @@ const incrementVersion = (version, type, isPreRelease = false) => {
                 case 'patch':
                     parts[2]++;
                     break;
+                default:
+                    throw new Error('Invalid version type. Use major, minor, or patch.');
             }
             newVersion = parts.join('.');
-            console.log(`📋 Incrementing stable: ${version} → ${newVersion}`);
+            console.log(`📋 Normal release increment: ${version} → ${newVersion}`);
         }
     }
     
+    console.log(`📋 Final new version: ${newVersion}`);
     return newVersion;
 };
 
-// Function to update version in both files
-const updateVersions = (newVersion) => {
-    // Update package.json
-    const packageData = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    packageData.version = newVersion;
-    fs.writeFileSync(packageJsonPath, JSON.stringify(packageData, null, 2) + '\n');
-    console.log(`✅ Updated package.json version to ${newVersion}`);
 
-    // Update module.json
-    const moduleData = JSON.parse(fs.readFileSync(moduleJsonPath, 'utf8'));
-    moduleData.version = newVersion;
-    fs.writeFileSync(moduleJsonPath, JSON.stringify(moduleData, null, 2) + '\n');
-    console.log(`✅ Updated module.json version to ${newVersion}`);
+
+// Function to check if Ollama is running
+const checkOllamaStatus = async () => {
+    try {
+        const response = await fetch('http://127.0.0.1:11434/', { method: 'GET', timeout: 5000 });
+        return response.ok;
+    } catch (error) {
+        console.error('Ollama server is not running or unreachable:', error.message);
+        return false;
+    }
 };
 
-// Function to build the project
-const buildProject = () => {
-    console.log('🏗️  Building project...');
+// Function to call Ollama for summarization
+const callOllama = async (commitMessages) => {
     try {
-        execSync('bun run build', { stdio: 'inherit' });
-        console.log('✅ Build completed successfully');
+        if (!commitMessages || commitMessages.length === 0) {
+            throw new Error('No commit messages to summarize.');
+        }
+        const prompt = `Summarize the following commit messages in a concise paragraph or (if more relevant) in a list of bullet points. Use definitive, factual statements based solely on the content of the messages, avoiding speculative language such as "likely due to," "possibly," or "might have." Write in a professional tone suitable for release notes:\n\n${commitMessages.join('\n')}`;
+        
+        const payload = {
+            model: 'qwen2.5:7b',
+            prompt: prompt,
+            max_tokens: 150,
+            temperature: 0.7,
+            stream: false
+        };
+        
+        const response = await fetch('http://127.0.0.1:11434/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            timeout: 30000
+        });
+        
+        if (!response.ok) throw new Error(`Ollama error: ${response.status} - ${await response.text()}`);
+        const data = await response.json();
+        return data.response.trim();
+    } catch (error) {
+        console.error('Error calling Ollama:', error.message);
+        return null;
+    }
+};
+
+// Function to generate release notes with Ollama and fallback
+const generateReleaseNotesWithFallback = async (previousTag) => {
+    let commitMessages = [];
+    try {
+        // Fetch commits since the previous tag
+        let range = previousTag ? `${previousTag}..HEAD^` : ''; // Use HEAD^ to exclude the release commit
+        let gitLogCommand = range
+            ? `git log ${range} --pretty=format:"%s"`
+            : `git log --pretty=format:"%s" -n 50`;
+        let logOutput = execSync(gitLogCommand).toString().trim();
+        commitMessages = logOutput
+            ? logOutput.split('\n').filter(msg => 
+                msg && 
+                !msg.match(/^(Release|chore: build and bump version)/) &&
+                !msg.match(/^\d+\.\d+\.\d+ manifest$/) &&
+                !msg.match(/^v\d+\.\d+\.\d+$/)
+            )
+            : [];
+
+        // If no commits found in the range, fall back to the last 10 commits
+        if (commitMessages.length === 0 && !range) {
+            console.log('No commits found in range, falling back to last 10 commits.');
+            gitLogCommand = `git log --pretty=format:"%s" -n 10`;
+            logOutput = execSync(gitLogCommand).toString().trim();
+            commitMessages = logOutput
+                ? logOutput.split('\n').filter(msg => 
+                    msg && 
+                    !msg.match(/^(Release|chore: build and bump version)/) &&
+                    !msg.match(/^\d+\.\d+\.\d+ manifest$/) &&
+                    !msg.match(/^v\d+\.\d+\.\d+$/)
+                )
+                : [];
+        }
+
+        console.log('Commits to summarize:', commitMessages);
+
+        if (commitMessages.length === 0) {
+            console.log('No new commits found to summarize.');
+            return '## Release Notes\n\nNo significant changes in this release.';
+        }
+
+        // Check if Ollama is running before calling it
+        const ollamaRunning = await checkOllamaStatus();
+        if (!ollamaRunning) {
+            console.warn('Ollama server is not running or unreachable. Falling back to raw commit list.');
+            return generateReleaseNotes(commitMessages);
+        }
+
+        const aiSummary = await callOllama(commitMessages);
+        if (aiSummary) {
+            console.log('Release notes successfully generated using Ollama.');
+            return `## Release Notes\n\n${aiSummary}`;
+        } else {
+            console.log('Ollama did not return a valid summary.');
+        }
+    } catch (error) {
+        console.error('Error generating release notes with Ollama:', error);
+    }
+
+    console.log('Falling back to generating release notes from commit messages.');
+    return generateReleaseNotes(commitMessages);
+};
+
+// Function to generate fallback release notes
+const generateReleaseNotes = (commitMessages) => {
+    if (!commitMessages || commitMessages.length === 0) {
+        return '## Release Notes\n\nNo significant changes in this release.';
+    }
+    const formattedCommits = commitMessages.map(message => `- ${message}`);
+    return `## What's Changed\n\n${formattedCommits.join('\n')}`;
+};
+
+// Function to get the previous tag
+const getPreviousTag = () => {
+    try {
+        return execSync('git describe --tags --abbrev=0').toString().trim();
+    } catch (error) {
+        console.log('No previous tag found.');
+        return null;
+    }
+};
+
+// Determine target branch
+const targetBranch = isTestRelease ? 'next' : 'main';
+console.log(`🎯 Target branch: ${targetBranch}`);
+
+// --- Branch merging logic ---
+try {
+    const currentBranch = execSync('git branch --show-current').toString().trim();
+    console.log(`📍 Current branch: ${currentBranch}`);
+    if (isTestRelease) {
+        // For pre/draft releases: ensure next branch has latest main changes
+        if (currentBranch !== 'next') {
+            console.log('🔄 Switching to next branch...');
+            execSync('git checkout next');
+        }
+        console.log('📥 Merging latest main into next branch...');
+        try {
+            execSync('git merge main');
+            console.log('✅ Successfully merged main into next');
+        } catch (error) {
+            console.error('❌ Merge conflict detected while merging main into next. Please resolve conflicts and re-run the release script.');
+            process.exit(1);
+        }
+    } else {
+        // For production releases: merge next into main
+        if (currentBranch !== 'main') {
+            console.log('🔄 Switching to main branch...');
+            execSync('git checkout main');
+        }
+        console.log('📥 Merging next branch into main...');
+        try {
+            execSync('git merge next');
+            console.log('✅ Successfully merged next into main');
+        } catch (error) {
+            console.error('❌ Merge conflict detected while merging next into main. Please resolve conflicts and re-run the release script.');
+            process.exit(1);
+        }
+    }
+} catch (error) {
+    console.error('❌ Error handling git branches:', error.message);
+    process.exit(1);
+}
+
+// Update package.json (skip for drafts)
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+const currentVersion = packageJson.version;
+
+let newVersion;
+if (isDraft) {
+    newVersion = currentVersion; // Drafts use current version, no increment
+    console.log(`🚀 Creating draft release with current version: ${currentVersion} (DRAFT - no version bump)`);
+} else {
+    newVersion = incrementVersion(currentVersion, versionType, isPreRelease);
+    const releaseTypeLabel = isPreRelease ? ' (PRE-RELEASE)' : '';
+    console.log(`🚀 Releasing ${versionType} version: ${currentVersion} → ${newVersion}${releaseTypeLabel}`);
+}
+
+// Always set environment to production for all releases
+packageJson.env = 'production';
+
+// Check if the new version tag already exists (only for published releases)
+if (!isDraft) {
+    try {
+        execSync(`git rev-parse ${newVersion}`, { stdio: 'pipe' });
+        console.error(`❌ Tag ${newVersion} already exists! Please check your git history.`);
+        process.exit(1);
+    } catch (error) {
+        // Tag doesn't exist, which is what we want
+        console.log(`✅ Version ${newVersion} is available`);
+    }
+    
+    // Update files and build for published releases only
+    packageJson.version = newVersion;
+    if (packageJson.debug !== undefined) {
+        packageJson.debug = false; // Set debug to false for releases
+    }
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 4));
+
+    // Update module.json
+    const moduleJson = JSON.parse(fs.readFileSync(moduleJsonPath, 'utf8'));
+    moduleJson.version = newVersion;
+    if (moduleJson.manifest) {
+        moduleJson.manifest = moduleJson.manifest.replace(/\/releases\/download\/[^/]+\//, `/releases/download/${newVersion}/`);
+    }
+    if (moduleJson.download) {
+        moduleJson.download = moduleJson.download.replace(/\/releases\/download\/[^/]+\//, `/releases/download/${newVersion}/`);
+    }
+    fs.writeFileSync(moduleJsonPath, JSON.stringify(moduleJson, null, 4));
+
+    // Build after version update so the new version is included in the build
+    console.log('🔨 Building project...');
+    try {
+        execSync('npm run build', { stdio: 'inherit' });
     } catch (error) {
         console.error('❌ Build failed:', error.message);
         process.exit(1);
     }
-};
 
-// Function to create git tag and push
-const createGitTag = (version, isTestRelease) => {
-    const targetBranch = isTestRelease ? 'next' : 'main';
-    
-    try {
-        // Ensure we're on the correct branch
-        const currentBranch = execSync('git branch --show-current').toString().trim();
-        
-        if (isTestRelease) {
-            // For test releases, ensure next branch exists and switch to it
-            try {
-                execSync('git fetch origin next', { stdio: 'pipe' });
-                execSync('git checkout next', { stdio: 'pipe' });
-            } catch (error) {
-                // If next branch doesn't exist, create it from main
-                console.log('📋 Creating next branch from main...');
-                execSync('git checkout main', { stdio: 'pipe' });
-                execSync('git checkout -b next', { stdio: 'pipe' });
-                execSync('git push -u origin next', { stdio: 'pipe' });
-            }
-        } else {
-            // For production releases, ensure we're on main
-            if (currentBranch !== 'main') {
-                console.log('📋 Switching to main branch...');
-                execSync('git checkout main', { stdio: 'pipe' });
-            }
-            
-            // Pull latest changes
-            execSync('git pull origin main', { stdio: 'pipe' });
-        }
-        
-        // Stage and commit the version changes
-        execSync('git add package.json module.json', { stdio: 'pipe' });
-        execSync(`git commit -m "Release ${version}"`, { stdio: 'pipe' });
-        
-        // Create and push tag
-        execSync(`git tag -a v${version} -m "Release ${version}"`, { stdio: 'pipe' });
-        execSync(`git push origin v${version}`, { stdio: 'pipe' });
-        execSync(`git push origin ${targetBranch}`, { stdio: 'pipe' });
-        
-        console.log(`✅ Created and pushed tag: v${version}`);
-        console.log(`✅ Pushed to branch: ${targetBranch}`);
-        
-    } catch (error) {
-        console.error('❌ Git operations failed:', error.message);
-        process.exit(1);
-    }
-};
+    // Commit changes
+    console.log('💾 Committing changes...');
+    execSync('git add .');
+    execSync(`git commit -m "chore: build and bump version to ${newVersion}"`);
+} else {
+    console.log(`✅ Draft release - no file changes or build needed`);
+}
 
-// Function to create GitHub release
-const createGitHubRelease = async (version, isTestRelease, isDraft) => {
-    const releaseData = {
-        tag_name: `v${version}`,
-        name: `Release ${version}`,
-        body: `Release ${version}\n\nChanges in this release:\n- TODO: Add release notes`,
-        draft: isDraft,
-        prerelease: isTestRelease && !isDraft
-    };
-    
-    try {
-        // Check if we have GitHub CLI available
-        execSync('gh --version', { stdio: 'pipe' });
-        
-        const releaseCommand = [
-            'gh', 'release', 'create', `v${version}`,
-            '--title', `"Release ${version}"`,
-            '--notes', `"Release ${version}\\n\\nChanges in this release:\\n- TODO: Add release notes"`
-        ];
-        
-        if (isDraft) {
-            releaseCommand.push('--draft');
-        } else if (isTestRelease) {
-            releaseCommand.push('--prerelease');
-        }
-        
-        execSync(releaseCommand.join(' '), { stdio: 'inherit' });
-        console.log(`✅ Created GitHub release: v${version}`);
-        
-    } catch (error) {
-        console.log('⚠️  GitHub CLI not available or failed. The GitHub Action will handle the release.');
-        console.log('   Make sure to push the tag to trigger the release workflow.');
-    }
-};
+// Generate release notes *before* creating the tag
+console.log('📝 Generating release notes...');
+const previousTag = getPreviousTag();
+const releaseNotes = await generateReleaseNotesWithFallback(previousTag);
 
-// Main execution
-(async () => {
-    console.log('🚀 Starting release process...');
-    console.log(`📋 Release type: ${versionType}`);
-    console.log(`📋 Is draft: ${isDraft}`);
-    console.log(`📋 Is pre-release: ${isPreRelease}`);
-    console.log(`📋 Is test release: ${isTestRelease}`);
-    
-    // Read current versions
-    const packageData = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    const moduleData = JSON.parse(fs.readFileSync(moduleJsonPath, 'utf8'));
-    
-    const currentVersion = packageData.version;
-    console.log(`📋 Current version: ${currentVersion}`);
-    
-    // Validate versions match
-    if (packageData.version !== moduleData.version) {
-        console.error(`❌ Version mismatch: package.json (${packageData.version}) vs module.json (${moduleData.version})`);
-        process.exit(1);
+// Create tag (skip for drafts)
+if (!isDraft) {
+    console.log('🏷️  Creating tag...');
+    execSync(`git tag ${newVersion}`);
+} else {
+    console.log('🏷️  Skipping tag creation for draft release...');
+}
+
+// Push changes and tag (only for published releases)
+if (!isDraft) {
+    console.log(`⬆️  Pushing to ${targetBranch} branch...`);
+    execSync(`git push origin ${targetBranch}`);
+    execSync(`git push origin ${newVersion}`);
+    console.log(`📌 Pushed tag ${newVersion}`);
+} else {
+    console.log('📌 No git changes to push for draft release');
+}
+
+// Create a temporary file for release notes
+const releaseNotesPath = path.join(__dirname, 'release-notes.md');
+fs.writeFileSync(releaseNotesPath, releaseNotes);
+
+// Create GitHub release
+const releaseTypeText = isDraft ? ' (draft)' : isPreRelease ? ' (pre-release)' : '';
+console.log(`📦 Creating GitHub release${releaseTypeText}...`);
+try {
+    let ghCommand = `gh release create ${newVersion} --title "Version ${newVersion}" --notes-file ${releaseNotesPath}`;
+    if (isDraft) {
+        ghCommand += ' --draft';
     }
+    if (isPreRelease) {
+        ghCommand += ' --prerelease';
+    }
+    execSync(ghCommand);
     
-    // Calculate new version
-    const newVersion = incrementVersion(currentVersion, versionType, isTestRelease);
-    console.log(`📋 New version: ${newVersion}`);
-    
-    // Update versions in files
-    updateVersions(newVersion);
-    
-    // Build project
-    buildProject();
-    
-    // Create git tag and push
-    createGitTag(newVersion, isTestRelease);
-    
-    // Create GitHub release (if GitHub CLI is available)
-    await createGitHubRelease(newVersion, isTestRelease, isDraft);
-    
-    console.log('🎉 Release process completed successfully!');
-    console.log(`📋 Released version: ${newVersion}`);
-    console.log('📋 The GitHub Action will build and publish the release.');
-})().catch(error => {
-    console.error('❌ Release process failed:', error.message);
+    const releaseTypeMsg = isDraft ? 'draft' : isPreRelease ? 'pre-release' : 'release';
+    console.log(`✅ GitHub ${releaseTypeMsg} created for ${newVersion}`);
+} catch (error) {
+    console.error('❌ Error creating GitHub release:', error.message);
+    console.log('You may need to install GitHub CLI (gh) or authenticate it.');
+    console.log('To install: https://cli.github.com/');
     process.exit(1);
-});
+}
+
+// Clean up
+try {
+    fs.unlinkSync(releaseNotesPath);
+} catch (error) {
+    console.error('❌ Error removing temporary release notes file:', error);
+}
+
+const actionText = isDraft ? 'drafted' : isPreRelease ? 'pre-released' : 'released';
+console.log(`🎉 Successfully ${actionText} version ${newVersion} on ${targetBranch} branch`);
+console.log(`📄 Release notes:\n${releaseNotes}`);
+console.log(`🔗 View release: https://github.com/geoidesic/foundryvtt-actor-studio/releases/tag/${newVersion}`);
+
+if (isDraft) {
+    console.log(`📝 Note: This is a DRAFT RELEASE (tentative).`);
+    console.log(`❌ GitHub Actions will NOT run - no install files generated.`);
+    console.log(`🔒 No version bump, no commits, no tags - purely tentative.`);
+    console.log(`🔄 Publish the draft to trigger Actions and generate install files.`);
+} else if (isPreRelease) {
+    console.log(`📝 Note: This is a PRE-RELEASE on the '${targetBranch}' branch.`);
+    console.log(`✅ GitHub Actions WILL run and update the next branch manifest!`);
+    console.log(`🔄 When ready, merge '${targetBranch}' to 'main' and create a full release.`);
+} else {
+    console.log(`🚀 Production release created on 'main' branch. GitHub Actions will run!`);
+}
