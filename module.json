@@ -1,40 +1,48 @@
 {
-  "id": "foundryvtt-journal-to-pdf",
-  "title": "Journal to PDF",
-  "description": "Export Journal Entries to PDF. System agnostic. Potentially supports PDF theming (though no themes are currently provided).",
-  "version": "1.0.3",
-  "styles": ["dist/style.css"],
-  "esmodules": ["index.js"],
-  "languages": [
-    {
-      "lang": "en",
-      "name": "English",
-      "path": "lang/en.json",
-      "isDefault": true,
-      "flags": {}
+    "id": "foundryvtt-journal-to-pdf",
+    "title": "Journal to PDF",
+    "description": "Export Journal Entries to PDF. System agnostic. Potentially supports PDF theming (though no themes are currently provided).",
+    "version": "2.0.0",
+    "styles": [
+        "dist/style.css"
+    ],
+    "esmodules": [
+        "index.js"
+    ],
+    "languages": [
+        {
+            "lang": "en",
+            "name": "English",
+            "path": "lang/en.json",
+            "isDefault": true,
+            "flags": {}
+        }
+    ],
+    "packs": [],
+    "url": "https://round-table.games/",
+    "manifest": "https://github.com/geoidesic/foundryvtt-journal-to-pdf/releases/latest/download/module.json",
+    "download": "https://github.com/geoidesic/foundryvtt-journal-to-pdf/releases/latest/download/module.zip",
+    "authors": [
+        {
+            "name": "Noel da Costa",
+            "url": "https://www.arc2.co.uk",
+            "discord": "geoidesic",
+            "flags": {}
+        }
+    ],
+    "compatibility": {
+        "minimum": "11",
+        "verified": "13",
+        "maximum": "13"
+    },
+    "flags": {
+        "hotReload": {
+            "extensions": [
+                "json"
+            ],
+            "paths": [
+                "lang"
+            ]
+        }
     }
-  ],
-  "packs": [],
-  "url": "https://round-table.games/",
-  "manifest": "https://github.com/geoidesic/foundryvtt-journal-to-pdf/releases/latest/download/module.json",
-  "download": "https://github.com/geoidesic/foundryvtt-journal-to-pdf/releases/latest/download/module.zip",
-  "authors": [
-    {
-      "name": "Noel da Costa",
-      "url": "https://www.arc2.co.uk",
-      "discord": "geoidesic",
-      "flags": {}
-    }
-  ],
-  "compatibility": {
-    "minimum": "11",
-    "verified": "13",
-    "maximum": "13"
-  },
-  "flags": {
-    "hotReload": {
-      "extensions": ["json"],
-      "paths": ["lang"]
-    }
-  }
 }
