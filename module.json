@@ -2,7 +2,7 @@
     "id": "foundryvtt-journal-to-pdf",
     "title": "Journal to PDF",
     "description": "Export Journal Entries to PDF. System agnostic. Potentially supports PDF theming (though no themes are currently provided).",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "styles": [
         "dist/style.css"
     ],
